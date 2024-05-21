@@ -1,8 +1,20 @@
+"use client"; // Asegúrate de que esta línea esté al inicio del archivo
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation'; // Usa next/navigation en lugar de next/router
+import { FormEvent } from 'react'; // Importa FormEvent
 
 export default function Login() {
+  const router = useRouter(); // Usa el hook useRouter
+
+  const handleSignIn = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Previene el comportamiento predeterminado del formulario
+    // Aquí puedes agregar la lógica para el inicio de sesión
+    // Por ahora, simplemente redireccionamos a otra página, por ejemplo, "/dashboard"
+    router.push('/dashboard'); // Redirige a la página deseada
+  };
+
   return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="w-full max-w-md p-8 space-y-8 bg-white rounded shadow-lg">
@@ -63,6 +75,7 @@ export default function Login() {
 
             <div>
               <button
+
                   type="submit"
                   className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
@@ -73,7 +86,7 @@ export default function Login() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               {"Don't have an account? "}
-              <Link href="/prueba">
+              <Link href="/auth">
                 <span className="font-medium text-indigo-600 hover:text-indigo-500">
                   Sign up
                 </span>
