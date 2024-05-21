@@ -1,15 +1,7 @@
 import Image from 'next/image';
-import { useRouter } from 'next/router';
+// import { useRouter } from 'next/router';
 
-export default function Second() {
-    const router = useRouter();
-
-    const handleSignUp = () => {
-        // Aquí puedes agregar la lógica para crear la cuenta
-        // Por ahora, simplemente redireccionamos a la página de inicio
-        router.push('/');
-    };
-
+export default function Page() {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="w-full max-w-md p-8 space-y-8 bg-white rounded shadow-lg">
@@ -72,13 +64,13 @@ export default function Second() {
                     </div>
 
                     <div>
-                        <button
+                        <a
                             type="button"
-                            onClick={handleSignUp}
+                            href="/"
                             className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
                             Sign up
-                        </button>
+                        </a>
                     </div>
                 </form>
             </div>
