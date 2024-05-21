@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 
-export default function SignUp() {
+export default function Second() {
     const router = useRouter();
 
     const handleSignUp = () => {
