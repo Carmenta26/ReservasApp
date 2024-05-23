@@ -1,9 +1,9 @@
-
 "use client";
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 
 interface Reservation {
+    reservacionID: number;
     NombreCliente: string;
     Contacto: string;
     Fecha: string;
@@ -13,17 +13,51 @@ interface Reservation {
     RequisitosEspeciales: string;
 }
 
-export default function Page() {
+export default function Dashboard() {
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [form, setForm] = useState<Reservation>({
+        reservacionID: 0,
         NombreCliente: '',
         Contacto: '',
         Fecha: '',
         Hora: '',
         TipoServicio: '',
         DuracionServicio: '',
-        RequisitosEspeciales: ''
+        RequisitosEspeciales: '',
     });
+
+
+
+    useEffect(() => {
+        fetchReservations();
+    }, []);
+
+    const fetchReservations = async () => {
+        try {
+            const response = await fetch('http://localhost:5134/reservations');
+            if (!response.ok) {
+                throw new Error('Error fetching reservations');
+            }
+            const data = await response.json();
+            console.log('Fetched reservations:', data);
+
+            const mappedData = data.map((item: any) => ({
+                reservacionID: item.reservacionID,
+                NombreCliente: item.nombreCliente || '',
+                Contacto: item.contacto || '',
+                Fecha: item.fecha || '',
+                Hora: item.hora || '',
+                TipoServicio: item.tipoServicio || '',
+                DuracionServicio: item.duracionServicio || '',
+                RequisitosEspeciales: item.requisitosEspeciales || '',
+            }));
+
+            console.log('Mapped reservations:', mappedData);
+            setReservations(mappedData);
+        } catch (error) {
+            console.error('Error fetching reservations:', error);
+        }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setForm({
@@ -32,30 +66,114 @@ export default function Page() {
         });
     };
 
-    const handleAddReservation = (e: FormEvent<HTMLFormElement>) => {
+    const sendReservationToServer = async (reservation: Reservation) => {
+        try {
+            let url = 'http://localhost:5134/addreserv';
+            let method = 'POST';
+
+            // Si hay un índice de reserva seleccionado, cambia la URL y el método HTTP a PUT para actualizar
+            if (selectedReservationIndex !== null) {
+                url = `http://localhost:5134/updatereservation/${reservation.reservacionID}`;
+                method = 'PUT';
+                selectedReservationIndex == null
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reservation),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Error en la solicitud:', errorData);
+                throw new Error('Error en la solicitud');
+            }
+
+            const data = await response.json();
+            console.log('Operación completada con éxito:', data);
+            return data;
+        } catch (error) {
+            console.error('Error al procesar la solicitud:', error);
+            throw error;
+        }
+    };
+
+    const handleAddReservation = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setReservations([...reservations, form]);
+        const newReservation = { ...form };
+
+        try {
+            await sendReservationToServer(newReservation);
+            fetchReservations(); // Fetch the updated list of reservations
+            setForm({
+                reservacionID: 0,
+                NombreCliente: '',
+                Contacto: '',
+                Fecha: '',
+                Hora: '',
+                TipoServicio: '',
+                DuracionServicio: '',
+                RequisitosEspeciales: ''
+            });
+        } catch (error) {
+            console.error('Error al agregar la reservación:', error);
+        }
+    };
+
+    const handleDeleteReservation = async (index: number) => {
+        try {
+            // Obtener el ID de la reserva que se va a eliminar
+            const reservationIdToDelete = reservations[index].reservacionID;
+
+            // Llamar al endpoint para eliminar la reserva
+            const response = await fetch(`http://localhost:5134/deletereservation/${reservationIdToDelete}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al eliminar la reserva');
+            }
+
+            // Si la eliminación fue exitosa, actualizar la lista de reservas
+            fetchReservations();
+        } catch (error) {
+            console.error('Error al eliminar la reserva:', error);
+        }
+    };
+    const [selectedReservationIndex, setSelectedReservationIndex] = useState<number | null>(null);
+
+    const handleRowClick = (index: number) => {
+        setSelectedReservationIndex(index);
+        setForm(reservations[index]); // Set the form data to the selected reservation
+    };
+
+
+    const resetForm = () => {
         setForm({
+            reservacionID: 0,
             NombreCliente: '',
             Contacto: '',
             Fecha: '',
             Hora: '',
             TipoServicio: '',
             DuracionServicio: '',
-            RequisitosEspeciales: ''
+            RequisitosEspeciales: '',
         });
+        setSelectedReservationIndex(null); // Reset the selectedReservationIndex to null
     };
 
-    const handleDeleteReservation = (index: number) => {
-        const newReservations = reservations.filter((_, i) => i !== index);
-        setReservations(newReservations);
+    const handleOutsideClick = () => {
+        resetForm(); // Reset the form and selectedReservationIndex when clicking outside the table
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-8 flex">
-            <div className="w-1/2 pr-8">
-                <h2 className="text-3xl font-extrabold mb-6 text-black">Agregar Reservación</h2>
-                <form onSubmit={handleAddReservation} className="space-y-4 bg-white p-6 rounded shadow-lg">
+        <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex flex-col md:flex-row" onClick={handleOutsideClick}>
+            <div className="w-full md:w-1/2 pr-0 md:pr-8 mb-4 md:mb-0">
+                <h2 className="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 text-black">Agregar Reservación</h2>
+                <form onSubmit={handleAddReservation} className="space-y-4 bg-white p-4 md:p-6 rounded shadow-lg" onClick={(e) => e.stopPropagation()}>
                     <div>
                         <label htmlFor="NombreCliente" className="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
                         <input
@@ -148,31 +266,33 @@ export default function Page() {
                     </div>
                 </form>
             </div>
-            <div className="w-1/2 pl-8">
-                <h2 className="text-3xl font-extrabold mb-6 text-black">Reservaciones</h2>
-                <div className="bg-white p-6 rounded shadow-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
+            <div className="w-full md:w-1/2 pl-0 md:pl-8">
+                <h2 className="text-2xl md:text-3xl font-extrabold mb-4 md:mb-6 text-black">Reservaciones</h2>
+                <div className="bg-white p-4 md:p-6 rounded shadow-lg overflow-x-auto" onClick={(e) => e.stopPropagation()}>
+                    <table className="min-w-full divide-y divide-gray-200 table-auto">
                         <thead>
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre del Cliente</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Servicio</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre del Cliente</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Servicio</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración del Servicio</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requisitos Especiales</th>
+                            <th className="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                         {reservations.map((reservation, index) => (
-                            <tr key={index}>
-                                <td className="px-6 py-4 whitespace-nowrap text-black">{reservation.NombreCliente}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-black ">{reservation.Contacto}</td>
-                                <td className="px-6 py-4 whitespace-nowra text-black" >{reservation.Fecha}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-black" >{reservation.Hora}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-black">{reservation.TipoServicio}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-black">{reservation.DuracionServicio}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <tr key={index} onClick={() => handleRowClick(index)} className="cursor-pointer hover:bg-gray-50">
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.NombreCliente}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.Contacto}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.Fecha}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.Hora}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.TipoServicio}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.DuracionServicio}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-black">{reservation.RequisitosEspeciales}</td>
+                                <td className="px-2 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button
                                         onClick={() => handleDeleteReservation(index)}
                                         className="text-red-600 hover:text-red-900"
